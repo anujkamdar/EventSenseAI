@@ -1,12 +1,12 @@
-# React + Vite
+# EventSense AI web :
+* PROBLEM ? --> Event organizers often struggle to keep track of how attendees feel during an event. They rely on post-event surveys or manually checking social media and feedback channels, which means they only learn about problems after the event is over. This leads to missed opportunities to fix issues in real time.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Currently, two official plugins are available:
+  Common event pain points include:
+   1. Long queues at entry points and food stalls.
+   2. Poor audio or visual quality during sessions.
+   3. Overcrowding and safety concerns.
+   4. Dissatisfaction with speakers or overall event management.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+* OUR SOLUTION --> We're building an AI-driven sentiment monitoring platform that collects, analyzes, and alerts event organizers about attendee sentiment as it happens.
