@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth , createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged , signOut} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getDatabase, ref, set, get, push, onValue } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js';
+import { getDatabase, ref, set, get, push, onValue,orderByChild,equalTo,query } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js';
 import {setDoc,doc,getFirestore,onSnapshot, updateDoc,getDoc} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js'
 
 
@@ -27,5 +27,5 @@ const db = getDatabase(app);
 export{
     app,
     auth, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged,signOut,
-    db,getDatabase,ref,set,get,push,onValue,doc,setDoc,onSnapshot,getFirestore,updateDoc,getDoc}
+    db,getDatabase,ref,set,get,push,onValue,doc,setDoc,onSnapshot,getFirestore,updateDoc,getDoc,orderByChild,equalTo,query}
 

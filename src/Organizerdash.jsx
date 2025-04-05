@@ -1,22 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState,useref,use } from 'react';
 import { Brain, Calendar, MessageSquare, Bell, User as UserIcon, Search, LogOut, Plus, Users, Settings, ChevronLeft, MessageCircle, X, Send, Upload, Calendar as CalendarIcon, MapPin } from 'lucide-react';
-import { auth, db, ref, set, get, push, onAuthStateChanged } from './firebaseinit';
+import { auth, db, ref, set, get, push, onAuthStateChanged, signOut } from './firebaseinit';
+import {Link,NavLink,useNavigate} from "react-router-dom";
 let uid;
 function OrganizerDashboard() {
 
+  const navigate = useNavigate();
   const [userData,setUserData] = useState(null);
   const [initialized, setInitialized] = useState(false);
+  const [events,setEvents] = useState([]);
 
-
+  let loadedEvents = [];
   if(!initialized){
     setInitialized(true);
     onAuthStateChanged(auth, async (user) => {
       // if(user){
         uid = user.uid;
+        // console.log(uid)
         const snap = await get(ref(db,`users/${uid}`))
+        setEventForm(prev => ({
+          ...prev,
+          organizerId: uid
+        }));
+    
         let data = snap.val()
         setUserData(data);
         console.log(data);
+        let eventList = data.events
+        for(let eventId in eventList){
+          let eventData = eventList[eventId]["basicdata"];
+          loadedEvents.push({
+            id: eventId,
+            name: eventData.name,
+            date: eventData.date,
+            location: eventData.location,
+            status: "Active",
+            image: eventData.image,
+            description: eventData.description,
+            attendees: 245,
+            totalCapacity: 500,
+            revenue: 24500
+          })
+        }
+        setEvents(loadedEvents);
       // }
     })
   }
@@ -44,6 +70,7 @@ function OrganizerDashboard() {
       let eventId = await push(ref(db, `basiceventdata`), eventForm);
       eventId = eventId.key
       console.log(eventId);
+      console.log(uid);
       await set(ref(db, `users/${uid}/events/${eventId}/basicdata`), eventForm);
     } catch {
       (error) => {
@@ -57,6 +84,8 @@ function OrganizerDashboard() {
 
   const [activeTab, setActiveTab] = useState('events');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [eventForm, setEventForm] = useState({
     name: '',
@@ -64,50 +93,13 @@ function OrganizerDashboard() {
     date: '',
     location: '',
     image: null,
-    previewImage: null
+    previewImage: null,
+    
   });
   const [chatMessages, setChatMessages] = useState([
     { id: 1, text: "Hello! How can I help you today?", isBot: true },
   ]);
 
-  const events = [
-    {
-      id: 1,
-      name: "Tech Conference 2025",
-      date: "March 15, 2025",
-      location: "San Francisco, CA",
-      status: "Active",
-      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80",
-      description: "Join us for the biggest tech conference of 2025, featuring industry leaders and innovative workshops.",
-      attendees: 245,
-      totalCapacity: 500,
-      revenue: 24500
-    },
-    {
-      id: 2,
-      name: "Digital Marketing Summit",
-      date: "April 2, 2025",
-      location: "New York, NY",
-      status: "Draft",
-      image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=80",
-      description: "Discover the latest trends in digital marketing with industry experts.",
-      attendees: 0,
-      totalCapacity: 300,
-      revenue: 0
-    },
-    {
-      id: 3,
-      name: "AI & Machine Learning Expo",
-      date: "May 20, 2025",
-      location: "Austin, TX",
-      status: "Active",
-      image: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?auto=format&fit=crop&q=80",
-      description: "Experience the future of AI and machine learning technologies.",
-      attendees: 178,
-      totalCapacity: 400,
-      revenue: 17800
-    }
-  ];
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -120,7 +112,28 @@ function OrganizerDashboard() {
     }
   };
 
+  // const handleEventFormSubmit = (e) => {
+  //   e.preventDefault();
+  //   console.log('Form submitted:', eventForm);
+  //   setIsCreatingEvent(false);
+  // };
 
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!chatMessage.trim()) return;
+
+    setChatMessages(prev => [...prev, { id: Date.now(), text: chatMessage, isBot: false }]);
+
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: "I'm here to help! What would you like to know about your events?",
+        isBot: true
+      }]);
+    }, 1000);
+
+    setChatMessage('');
+  };
 
   if (isCreatingEvent) {
     return (
@@ -368,7 +381,17 @@ function OrganizerDashboard() {
                 </div>
               </div>
 
-              
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-4">
+                <button className="bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-500 transition-colors flex items-center justify-center gap-2">
+                  <Users size={20} />
+                  Manage Attendees
+                </button>
+                <button className="border border-indigo-600 text-indigo-400 py-3 px-4 rounded-lg hover:bg-indigo-600/10 transition-colors flex items-center justify-center gap-2">
+                  <Settings size={20} />
+                  Edit Event
+                </button>
+              </div>
             </div>
           </div>
         </main>
@@ -429,7 +452,10 @@ function OrganizerDashboard() {
                   <UserIcon size={20} />
                 </button>
                 <button className="text-gray-300 hover:text-white transition-colors">
-                  <LogOut size={20} />
+                  <LogOut size={20} onClick={async () => {
+                    signOut(auth);
+                    navigate("/");
+                  }}/>
                 </button>
               </div>
             </nav>
@@ -472,26 +498,84 @@ function OrganizerDashboard() {
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-semibold text-white">{event.name}</h3>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${event.status === 'Active'
+                  {/* <span className={`px-3 py-1 rounded-full text-sm font-medium ${event.status === 'Active'
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-gray-700/50 text-gray-300'
                     }`}>
                     {event.status}
-                  </span>
+                  </span> */}
                 </div>
                 <div className="space-y-2 text-gray-400">
                   <p>{event.date}</p>
                   <p>{event.location}</p>
                 </div>
-                <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
-                  <span>Attendees: {event.attendees}/{event.totalCapacity}</span>
-                  <span>${event.revenue.toLocaleString()}</span>
-                </div>
+                {/* <div className="mt-4 flex justify-between items-center text-sm text-gray-400"> */}
+                  {/* <span>Attendees: {event.attendees}/{event.totalCapacity}</span>
+                  <span>${event.revenue.toLocaleString()}</span> */}
+                {/* </div> */}
               </div>
             </div>
           ))}
         </div>
       </main>
+
+      {/* Chatbot Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-500 transition-colors"
+      >
+        <MessageCircle size={24} />
+      </button>
+
+      {/* Chatbot Modal */}
+      {isChatOpen && (
+        <div className="fixed bottom-24 right-6 w-96 bg-gray-900 rounded-xl border border-gray-800 shadow-xl">
+          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+            <div className="flex items-center gap-2">
+              <Brain className="text-indigo-400" size={24} />
+              <h3 className="font-semibold text-white">EventSense Assistant</h3>
+            </div>
+            <button
+              onClick={() => setIsChatOpen(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="h-96 overflow-y-auto p-4 space-y-4">
+            {chatMessages.map(message => (
+              <div
+                key={message.id}
+                className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
+              >
+                <div className={`max-w-[80%] rounded-lg p-3 ${message.isBot
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-indigo-600 text-white'
+                  }`}>
+                  {message.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-800">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                type="submit"
+                className="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-500 transition-colors"
+              >
+                <Send size={20} />
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
