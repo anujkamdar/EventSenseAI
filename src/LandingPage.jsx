@@ -4,10 +4,10 @@ import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthSta
   ref,set,get,push
 
  } from './firebaseinit';
-
+import {Link,NavLink,useNavigate} from "react-router-dom";
 
 function LandingPage() {
-
+  const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -17,11 +17,20 @@ function LandingPage() {
   const [name, setName] = useState("");
 
   const signInUser = async () => {
+    const token = `AAAAAAAAAAAAAAAAAAAAAOaT0QEAAAAAxTjI37fujQoFODFdvgjgoeWbbNg%3DveKKWhu2t1Zz1u6mifAS4GV5r5tMoT9f0S5kRsFuhbSWd2RFg3`
+    fetch("https://thingproxy.freeboard.io/fetch/https://api.twitter.com/2/tweets/search/recent?query=%23AI&max_results=10", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
+    .then(res => res.json())
+    .then(data => console.log(data))
+    .catch(err => console.error(err));
     
     
     
-    
-   
+    // const alldatasnap = await get(ref(db))
+    // console.log(alldatasnap.val());
     try{
       if (!email) {
         alert("Enter Email");
@@ -35,7 +44,12 @@ function LandingPage() {
       let uid = cred.user.uid;
       const snapshot = await get(ref(db,`users/${uid}/role`))
       const userRole = snapshot.val();
-   
+      if(userRole=="organizer"){
+        navigate("/organizerdash")
+      }
+      if(userRole=="attendee"){
+        navigate("/attendeedash")
+      }
     }
     catch(error)
     {
@@ -191,7 +205,9 @@ function LandingPage() {
                 Start Monitoring
                 <ArrowRight size={20} />
               </button>
-             
+              {/* <button className="border-2 border-indigo-600 text-indigo-400 px-8 py-3 rounded-lg font-semibold hover:bg-indigo-600/10 transition-all transform hover:scale-105">
+                View Demo
+              </button> */}
             </div>
           </div>
         </div>
@@ -260,7 +276,16 @@ function LandingPage() {
           <p className="text-xl text-gray-300 mb-8">
             Join leading event organizers who use EventSense AI to create better experiences.
           </p>
-          
+          <button 
+            onClick={() => {
+              setUserType('organizer');
+              setIsRegisterOpen(true);
+            }}
+            className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-500 transition-all transform hover:scale-105 flex items-center gap-2 mx-auto"
+          >
+            Start Your Free Trial
+            <ArrowRight size={20} />
+          </button>
         </div>
       </div>
 
@@ -376,8 +401,8 @@ function LandingPage() {
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-10 text-white focus:outline-none focus:border-indigo-500"
                       placeholder="Enter your name"
-                      value={name} 
-                     
+                      value={name} // just for the sake of keeping values
+                      // will remove lter 
                       onChange={(e) => {setName(e.target.value)}}
                     />
                   </div>
@@ -447,4 +472,4 @@ function LandingPage() {
   );
 }
 
-export default LandingPage;
+export default LandingPage;
