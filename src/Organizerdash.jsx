@@ -22,7 +22,6 @@ function OrganizerDashboard() {
           ...prev,
           organizerId: uid
         }));
-    
         let data = snap.val()
         setUserData(data);
         console.log(data);
@@ -93,8 +92,7 @@ function OrganizerDashboard() {
     date: '',
     location: '',
     image: null,
-    previewImage: null,
-    
+    previewImage: null
   });
   const [chatMessages, setChatMessages] = useState([
     { id: 1, text: "Hello! How can I help you today?", isBot: true },

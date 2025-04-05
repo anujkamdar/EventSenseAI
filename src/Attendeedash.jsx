@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Brain, Calendar, MessageSquare, Bell, User as UserIcon, Search, LogOut, Star, ChevronLeft, SmilePlus } from 'lucide-react';
-import { db,get,ref,onAuthStateChanged,auth,signOut} from './firebaseinit';
+import { db,get,ref,onAuthStateChanged,auth,signOut,push} from './firebaseinit';
 let uid;
 import { Link,NavLink,useNavigate } from 'react-router-dom';
 
@@ -11,12 +11,12 @@ function AttendeeDashboard() {
   const [sentiment, setSentiment] = useState(null);
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [permanenteventList, setPermanentEventList] = useState({});
 
   
     const [userData,setUserData] = useState(null);
     const [initialized, setInitialized] = useState(false);
     const [events,setEvents] = useState([]);
-
 
     let loadedEvents = [];
     if(!initialized){
@@ -29,10 +29,11 @@ function AttendeeDashboard() {
           let data = snap.val()
           console.log(data);
           const eventSnap = await get(ref(db,`basiceventdata`));
-          const eventList = eventSnap.val()
+          let eventList = eventSnap.val()
           console.log(eventList);
+          setPermanentEventList(eventList);
           for(let eventId in eventList){
-            console.log(eventId);
+            // console.log(eventId);
             let eventData = eventList[eventId];
             loadedEvents.push({
               id: eventId,
@@ -62,28 +63,19 @@ function AttendeeDashboard() {
     { name: 'disappointed', emoji: '😕', label: 'Disappointed' }
   ];
 
-  const handleSubmitFeedback = (e) => {
+  const handleSubmitFeedback = async (e) => {
     e.preventDefault();
-    // In a real app, this would send the data to an API
-    console.log({ rating, feedback, sentiment });
-    get(ref(db,`user`)).then((snapshot)=>{
-      const userdata = snapshot.val();
-      get(ref(db,`basiceventdata`)).then((snap) => {
-        let eventlist = snap.val();
-        console.log(eventlist);
-        for(let eachuid in userdata){
-          for(let eventId in eventlist){
-            if(eachuid==eventlist[eventId]["organizerId"] ){
-              set(ref(db,`users/${eachuid}/events/${eventId}/reviews`),{ rating, feedback, sentiment })
-            }
-  
-          }
-        }
-        
-      })
+    let idOfSelected = selectedEvent.id;
+    // console.log(eventList);
+    console.log(permanenteventList);
 
-    })
+    try{
+      await push(ref(db,`users/${permanenteventList[idOfSelected]["organizerId"]}/events/${idOfSelected}/reviews`),{rating, feedback, sentiment})
+    }catch(error){
+      alert(error.message)
+    }
     
+    console.log({ rating, feedback, sentiment });
     alert('Thank you for your feedback!');
     setRating(0);
     setFeedback('');
