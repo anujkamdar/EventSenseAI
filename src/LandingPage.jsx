@@ -1,7 +1,86 @@
-import React from 'react';
-import { Brain, LineChart, Heart, ArrowRight} from 'lucide-react';
+import React, { useState } from 'react';
+import { Brain, LineChart, Heart, ArrowRight, Menu, X, User, Lock, Mail } from 'lucide-react';
+import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged , auth,db,doc,getFirestore,updateDoc,onSnapshot,setDoc,getDoc,
+  ref,set,get,push
+
+ } from './firebaseinit';
+
 
 function LandingPage() {
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [userType, setUserType] = useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+
+  const signInUser = async () => {
+    
+    
+    
+    
+   
+    try{
+      if (!email) {
+        alert("Enter Email");
+        return;
+      }
+      if (!password) {
+        alert("Enter Password");
+        return;
+      }
+      const cred = await signInWithEmailAndPassword(auth,email,password);
+      let uid = cred.user.uid;
+      const snapshot = await get(ref(db,`users/${uid}/role`))
+      const userRole = snapshot.val();
+   
+    }
+    catch(error)
+    {
+      alert(error.message);
+    }
+  }
+
+  const saveDataOfNewUser = async () => {
+    try{
+      if (!email) {
+        alert("Enter Email");
+        return;
+      }
+      if (!password) {
+        alert("Enter Password");
+        return;
+      }
+      if (!name){
+        alert("Enter Name");
+        return;
+      }
+      const cred = await createUserWithEmailAndPassword(auth,email,password);
+      const uid = cred.user.uid;
+        const userData = {
+          name : name,
+          email : email,
+        }
+        const userRef = ref(db,`users/${uid}`)
+        await(set(userRef,{
+          name: name,
+          email: email,
+          role: userType
+        }))
+        if(userType == "organizer"){
+          navigate("/organizerdash")
+        }
+        else if(userType == "attendee"){
+          navigate("/attendeedash")
+        }
+    }
+    catch(error){
+      console.log(error.message)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
@@ -18,22 +97,70 @@ function LandingPage() {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
+              <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
               <a href="#about" className="text-gray-300 hover:text-white transition-colors">About</a>
               <button 
+                onClick={() => {
+                  setUserType(null);
+                  setIsSignInOpen(true);
+                }}
                 className="text-gray-300 hover:text-white transition-colors"
               >
                 Sign In
               </button>
               <button 
+                onClick={() => {
+                  setUserType(null);
+                  setIsRegisterOpen(true);
+                }}
                 className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg transition-colors"
               >
                 Get Started
               </button>
             </nav>
+
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden text-gray-300 hover:text-white"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-gray-800 border-b border-gray-700">
+            <div className="px-4 py-3 space-y-3">
+              <a href="#features" className="block text-gray-300 hover:text-white transition-colors">Features</a>
+              <a href="#pricing" className="block text-gray-300 hover:text-white transition-colors">Pricing</a>
+              <a href="#about" className="block text-gray-300 hover:text-white transition-colors">About</a>
+              <button 
+                onClick={() => {
+                  setUserType(null);
+                  setIsSignInOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full text-left text-gray-300 hover:text-white transition-colors"
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => {
+                  setUserType(null);
+                  setIsRegisterOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg transition-colors"
+              >
+                Get Started
+              </button>
+            </div>
+          </div>
+        )}
       </header>
-    
+
       {/* Hero Section */}
       <div className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
         <div className="absolute inset-0 z-0">
@@ -55,11 +182,16 @@ function LandingPage() {
             </p>
             <div className="flex gap-4 justify-center">
               <button 
+                onClick={() => {
+                  setUserType('organizer');
+                  setIsRegisterOpen(true);
+                }}
                 className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-500 transition-all transform hover:scale-105 flex items-center gap-2"
               >
                 Start Monitoring
                 <ArrowRight size={20} />
               </button>
+             
             </div>
           </div>
         </div>
@@ -128,10 +260,191 @@ function LandingPage() {
           <p className="text-xl text-gray-300 mb-8">
             Join leading event organizers who use EventSense AI to create better experiences.
           </p>
+          
         </div>
       </div>
+
+      {/* Sign In Modal */}
+      {isSignInOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-8 rounded-xl shadow-xl w-full max-w-md border border-gray-800 animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Sign In</h3>
+              <button 
+                onClick={() => setIsSignInOpen(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            
+              <form className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 mb-2">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                      type="email"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-10 text-white focus:outline-none focus:border-indigo-500"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => {setEmail(e.target.value)}}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                      type="password"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-10 text-white focus:outline-none focus:border-indigo-500"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => {setPassword(e.target.value)}}
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-500 transition-colors"
+                  onClick={(e) => {e.preventDefault;
+                    console.log(email,password,userType);
+                    signInUser();
+                  }}
+                >
+                  Sign In
+                </button>
+              </form>
+            
+            
+            <p className="text-center mt-4 text-gray-400">
+              Don't have an account?{' '}
+              <button 
+                onClick={() => {
+                  setIsSignInOpen(false);
+                  setIsRegisterOpen(true);
+                }}
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                Register
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Register Modal */}
+      {isRegisterOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-8 rounded-xl shadow-xl w-full max-w-md border border-gray-800 animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Create Account</h3>
+              <button 
+                onClick={() => setIsRegisterOpen(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {!userType ? (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setUserType('organizer')}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-500 transition-colors flex items-center justify-center gap-2"
+                >
+                  <User size={20} />
+                  Register as Event Organizer
+                </button>
+                <button
+                  onClick={() => setUserType('attendee')}
+                  className="w-full border border-indigo-600 text-indigo-400 py-3 rounded-lg hover:bg-indigo-600/10 transition-colors flex items-center justify-center gap-2"
+                >
+                  <User size={20} />
+                  Register as Event Attendee
+                </button>
+              </div>
+            ) : (
+              <form className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 mb-2">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                      type="text"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-10 text-white focus:outline-none focus:border-indigo-500"
+                      placeholder="Enter your name"
+                      value={name} 
+                     
+                      onChange={(e) => {setName(e.target.value)}}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                      type="email"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-10 text-white focus:outline-none focus:border-indigo-500"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => {setEmail(e.target.value)}}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                      type="password"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-10 text-white focus:outline-none focus:border-indigo-500"
+                      placeholder="Create a password"
+                      value={password}
+                      onChange={(e) => {setPassword(e.target.value)}}
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-500 transition-colors"
+                  onClick={(e) => {e.preventDefault;
+                    console.log(email,password,name,userType);
+                    saveDataOfNewUser();
+                  }}
+                >
+                  Create Account as {userType === 'organizer' ? 'Event Organizer' : 'Event Attendee'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType(null)}
+                  className="w-full text-gray-400 hover:text-white transition-colors"
+                >
+                  Back to user selection
+                </button>
+              </form>
+            )}
+            
+            <p className="text-center mt-4 text-gray-400">
+              Already have an account?{' '}
+              <button 
+                onClick={() => {
+                  setIsRegisterOpen(false);
+                  setIsSignInOpen(true);
+                }}
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                Sign In
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default LandingPage;
+export default LandingPage;
