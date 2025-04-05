@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Brain, Calendar, MessageSquare, Bell, User as UserIcon, Search, LogOut, Star, ChevronLeft, SmilePlus } from 'lucide-react';
 import { db,get,ref,onAuthStateChanged,auth,signOut,push} from './firebaseinit';
-let uid;
+let uid,data;
 import { Link,NavLink,useNavigate } from 'react-router-dom';
 
 function AttendeeDashboard() {
@@ -13,11 +13,11 @@ function AttendeeDashboard() {
   const [feedback, setFeedback] = useState('');
   const [permanenteventList, setPermanentEventList] = useState({});
 
-  
+    const[reviews,setReviews] = useState([]);
     const [userData,setUserData] = useState(null);
     const [initialized, setInitialized] = useState(false);
     const [events,setEvents] = useState([]);
-
+    let clonerev = [];
     let loadedEvents = [];
     if(!initialized){
       setInitialized(true);
@@ -26,8 +26,8 @@ function AttendeeDashboard() {
           uid = user.uid;
           // console.log(uid)
           const snap = await get(ref(db,`users/${uid}`))
-          let data = snap.val()
-          console.log(data);
+          data = snap.val()
+          
           const eventSnap = await get(ref(db,`basiceventdata`));
           let eventList = eventSnap.val()
           console.log(eventList);
@@ -43,9 +43,7 @@ function AttendeeDashboard() {
               status: "Upcoming",
               image: eventData.image,
               description: eventData.description,
-              reviews: [
-                { id: 1, user: "John Doe", rating: 5, comment: "Amazing conference! Learned so much.", sentiment: "happy" },
-                { id: 2, user: "Jane Smith", rating: 4, comment: "Great speakers and networking opportunities.", sentiment: "satisfied" }]
+              // reviews: reviews,
             })
           }
           setEvents(loadedEvents);
@@ -53,7 +51,6 @@ function AttendeeDashboard() {
         // }
       })
     }
-
 
   const sentimentEmojis = [
     { name: 'excited', emoji: '😃', label: 'Excited' },
@@ -63,6 +60,16 @@ function AttendeeDashboard() {
     { name: 'disappointed', emoji: '😕', label: 'Disappointed' }
   ];
 
+  const emojiMap = {
+    excited: '😃',
+    happy: '😊',
+    satisfied: '🙂',
+    neutral: '😐',
+    disappointed: '😕'
+  }
+
+  
+
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     let idOfSelected = selectedEvent.id;
@@ -70,7 +77,26 @@ function AttendeeDashboard() {
     console.log(permanenteventList);
 
     try{
-      await push(ref(db,`users/${permanenteventList[idOfSelected]["organizerId"]}/events/${idOfSelected}/reviews`),{rating, feedback, sentiment})
+      console.log(data.name);
+      await push(ref(db,`users/${permanenteventList[idOfSelected]["organizerId"]}/events/${idOfSelected}/reviews`),{rating, feedback, sentiment,name:data.name})
+        // In your React component
+const sendDataToModel = async ({}) => {
+  try {
+    const response = await fetch("http://localhost:5000/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(feedback)
+    });
+
+    const result = await response.json();
+    console.log("Model result:", result);
+    // Optionally save result back to Firebase
+  } catch (error) {
+    console.error("Error calling AI model:", error);
+  }
+};
     }catch(error){
       alert(error.message)
     }
@@ -81,6 +107,8 @@ function AttendeeDashboard() {
     setFeedback('');
     setSentiment(null);
   };
+
+  
 
   if (selectedEvent) {
     return (
@@ -203,14 +231,17 @@ function AttendeeDashboard() {
                     selectedEvent.reviews.map(review => (
                       <div key={review.id} className="border-b border-gray-700 last:border-0 pb-4 last:pb-0">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="text-white font-medium">{review.user}</span>
+                          <span className="text-white font-medium">Name : {review.name}</span>
                           <div className="flex text-yellow-400">
                             {[...Array(review.rating)].map((_, i) => (
                               <Star key={i} size={16} fill="currentColor" />
                             ))}
                           </div>
                         </div>
-                        <p className="text-gray-400">{review.comment}</p>
+                        <p className="text-gray-400 font-bold">Feedback : {review.feedback}</p>
+                        <p className="text-gray-400">sentiment : {emojiMap[review.sentiment]}
+                          {review.sentiment}
+                        </p>
                       </div>
                     ))
                   ) : (
@@ -302,7 +333,34 @@ function AttendeeDashboard() {
             <div 
               key={event.id}
               className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-indigo-500 transition-all transform hover:scale-[1.02] cursor-pointer"
-              onClick={() => setSelectedEvent(event)}
+              onClick={async () => {
+                console.log(event);
+              
+                let idOfSelected = event.id;
+                const organizerId = permanenteventList[idOfSelected]?.organizerId;
+              
+                try {
+                  const snap = await get(ref(db, `users/${organizerId}/events/${idOfSelected}/reviews`));
+                  const reviewsData = snap.val();
+              
+                  const updatedEvent = {
+                    ...event,
+                    reviews: [],
+                  };
+              
+                  if (reviewsData) {
+                    for (let reviewId in reviewsData) {
+                      updatedEvent.reviews.push(reviewsData[reviewId]);
+                    }
+                  }
+              
+                  // Now safely update the state
+                  setSelectedEvent(updatedEvent);
+                } catch (error) {
+                  console.error("Failed to fetch reviews:", error);
+                }
+              }}
+              
             >
               <div className="h-48 overflow-hidden">
                 <img 

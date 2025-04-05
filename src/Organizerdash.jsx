@@ -1,51 +1,56 @@
-import React, { useState,useref,use } from 'react';
+import React, { useState, useref, use } from 'react';
 import { Brain, Calendar, MessageSquare, Bell, User as UserIcon, Search, LogOut, Plus, Users, Settings, ChevronLeft, MessageCircle, X, Send, Upload, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { auth, db, ref, set, get, push, onAuthStateChanged, signOut } from './firebaseinit';
-import {Link,NavLink,useNavigate} from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 let uid;
 function OrganizerDashboard() {
 
   const navigate = useNavigate();
-  const [userData,setUserData] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [initialized, setInitialized] = useState(false);
-  const [events,setEvents] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [reviews,setReviews] = useState([]);
 
   let loadedEvents = [];
-  if(!initialized){
+  if (!initialized) {
     setInitialized(true);
     onAuthStateChanged(auth, async (user) => {
       // if(user){
-        uid = user.uid;
-        // console.log(uid)
-        const snap = await get(ref(db,`users/${uid}`))
-        setEventForm(prev => ({
-          ...prev,
-          organizerId: uid
-        }));
-        let data = snap.val()
-        setUserData(data);
-        console.log(data);
-        let eventList = data.events
-        for(let eventId in eventList){
-          let eventData = eventList[eventId]["basicdata"];
-          loadedEvents.push({
-            id: eventId,
-            name: eventData.name,
-            date: eventData.date,
-            location: eventData.location,
-            status: "Active",
-            image: eventData.image,
-            description: eventData.description,
-            attendees: 245,
-            totalCapacity: 500,
-            revenue: 24500
-          })
-        }
-        setEvents(loadedEvents);
+      uid = user.uid;
+      // console.log(uid)
+      const snap = await get(ref(db, `users/${uid}`))
+      setEventForm(prev => ({
+        ...prev,
+        organizerId: uid
+      }));
+      let data = snap.val()
+      setUserData(data);
+      console.log(data);
+      let eventList = data.events
+      for (let eventId in eventList) {
+        let eventData = eventList[eventId]["basicdata"];
+        loadedEvents.push({
+          id: eventId,
+          name: eventData.name,
+          date: eventData.date,
+          location: eventData.location,
+          status: "Active",
+          image: eventData.image,
+          description: eventData.description,
+
+        })
+      }
+      setEvents(loadedEvents);
       // }
     })
   }
-
+  const emojiMap = {
+    excited: '😃',
+    happy: '😊',
+    satisfied: '🙂',
+    neutral: '😐',
+    disappointed: '😕'
+  }
 
   const uploadToCloudinary = async (file) => {
     const formData = new FormData()
@@ -116,21 +121,44 @@ function OrganizerDashboard() {
   //   setIsCreatingEvent(false);
   // };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 
     setChatMessages(prev => [...prev, { id: Date.now(), text: chatMessage, isBot: false }]);
-
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        text: "I'm here to help! What would you like to know about your events?",
-        isBot: true
-      }]);
-    }, 1000);
-
     setChatMessage('');
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyChqjTsap4lW-qLUyV7QQQEYOdziyJRzXo`
+
+
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: `${chatMessage}` }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      console.log("Failed");
+      throw new Error('Failed to fetch response from API.');
+    }
+
+
+
+    const data = await response.json();
+    const value = data.candidates[0].content.parts[0].text
+    const botReply = value.replace(/\s{2,}/g, ' ');
+    const botMessage = {
+      id: Date.now() + 1,
+      text: botReply,
+      isBot: true,
+    };
+    setChatMessages((prev) => [...prev, botMessage]);
   };
 
   if (isCreatingEvent) {
@@ -175,8 +203,8 @@ function OrganizerDashboard() {
                 <div className="relative group">
                   <div
                     className={`h-64 rounded-2xl border-3 border-dashed ${eventForm.previewImage
-                        ? 'border-indigo-400/50'
-                        : 'border-white/20'
+                      ? 'border-indigo-400/50'
+                      : 'border-white/20'
                       } flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-300 group-hover:border-indigo-400 bg-white/5`}
                     onClick={() => document.getElementById('event-image').click()}
                   >
@@ -340,8 +368,8 @@ function OrganizerDashboard() {
                 <div className="flex justify-between items-start">
                   <h1 className="text-3xl font-bold text-white">{selectedEvent.name}</h1>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedEvent.status === 'Active'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-gray-700/50 text-gray-300'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-gray-700/50 text-gray-300'
                     }`}>
                     {selectedEvent.status}
                   </span>
@@ -354,10 +382,58 @@ function OrganizerDashboard() {
               </div>
             </div>
 
+            <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+                <h2 className="text-xl font-semibold text-white mb-4">Event Reviews</h2>
+                <div className="space-y-4">
+                  {reviews.length > 0 ? (
+                  reviews.map(review => (
+                      <div key={review.id} className="border-b border-gray-700 last:border-0 pb-4 last:pb-0">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-white font-medium">Name : {review.name}</span>
+                          <div className="flex text-yellow-400">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Star key={i} size={16} fill="currentColor" />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-400 font-bold">Feedback : {review.feedback}</p>
+                        <p className="text-gray-400">sentiment : {emojiMap[review.sentiment]}
+                          {review.sentiment}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400">No reviews yet. Be the first to review!</p>
+                  )}
+                </div>
+              </div>
+
             {/* Right Column - Event Stats */}
-            <div className="space-y-8">
+            {/* <div className="space-y-8">
+              <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+                <h2 className="text-xl font-semibold text-white mb-4">Event Reviews</h2>
+                <div className="space-y-4">
+                  {selectedEvent.reviews.length > 0 ? (
+                    selectedEvent.reviews.map(review => (
+                      <div key={review.id} className="border-b border-gray-700 last:border-0 pb-4 last:pb-0">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-white font-medium">{review.user}</span>
+                          <div className="flex text-yellow-400">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Star key={i} size={16} fill="currentColor" />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-400">{review.comment}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400">No reviews yet. Be the first to review!</p>
+                  )}
+                </div>
+              </div>
               {/* Quick Stats */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                   <h3 className="text-gray-400 text-sm mb-2">Attendees</h3>
                   <div className="flex items-end gap-2">
@@ -377,10 +453,10 @@ function OrganizerDashboard() {
                     ${selectedEvent.revenue.toLocaleString()}
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-2 gap-4">
                 <button className="bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-500 transition-colors flex items-center justify-center gap-2">
                   <Users size={20} />
                   Manage Attendees
@@ -389,16 +465,16 @@ function OrganizerDashboard() {
                   <Settings size={20} />
                   Edit Event
                 </button>
-              </div>
+              </div> */}
             </div>
-          </div>
+          {/* </div> */}
         </main>
       </div>
     );
   }
 
 
-  if(userData) return (
+  if (userData) return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
       <header className="bg-gray-900/80 backdrop-blur-lg border-b border-gray-800 fixed w-full z-50">
@@ -453,7 +529,7 @@ function OrganizerDashboard() {
                   <LogOut size={20} onClick={async () => {
                     signOut(auth);
                     navigate("/");
-                  }}/>
+                  }} />
                 </button>
               </div>
             </nav>
@@ -484,7 +560,13 @@ function OrganizerDashboard() {
             <div
               key={event.id}
               className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-indigo-500 transition-all transform hover:scale-[1.02] cursor-pointer"
-              onClick={() => setSelectedEvent(event)}
+              onClick={() => {setSelectedEvent(event)
+                let eventId = event.id;
+                console.log(eventId);
+                let tempreviews = userData.events[eventId]["reviews"];
+                console.log(tempreviews);
+                setReviews(tempreviews);
+              }}
             >
               <div className="h-48 overflow-hidden">
                 <img
@@ -496,21 +578,11 @@ function OrganizerDashboard() {
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-semibold text-white">{event.name}</h3>
-                  {/* <span className={`px-3 py-1 rounded-full text-sm font-medium ${event.status === 'Active'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-gray-700/50 text-gray-300'
-                    }`}>
-                    {event.status}
-                  </span> */}
                 </div>
                 <div className="space-y-2 text-gray-400">
                   <p>{event.date}</p>
                   <p>{event.location}</p>
                 </div>
-                {/* <div className="mt-4 flex justify-between items-center text-sm text-gray-400"> */}
-                  {/* <span>Attendees: {event.attendees}/{event.totalCapacity}</span>
-                  <span>${event.revenue.toLocaleString()}</span> */}
-                {/* </div> */}
               </div>
             </div>
           ))}
@@ -547,8 +619,8 @@ function OrganizerDashboard() {
                 className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
               >
                 <div className={`max-w-[80%] rounded-lg p-3 ${message.isBot
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-indigo-600 text-white'
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-indigo-600 text-white'
                   }`}>
                   {message.text}
                 </div>
